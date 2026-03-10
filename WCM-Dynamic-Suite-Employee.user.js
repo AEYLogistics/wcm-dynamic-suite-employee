@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         WCM Dynamic Suite v5.37 • Employee Edition
+// @name         WCM Dynamic Suite v5.38 • Employee Edition
 // @namespace    http://tampermonkey.net/
-// @version      5.37
+// @version      5.38
 // @description  Exact Admin v3.04 CF math • +5% on Fri/Sat/Sun + last 3 days of month + all national holidays • Summer +15% (additional) • Enhanced holiday banner (X days before) • Peak Rate tooltip right-edge aligned + high-contrast • Esign Required tooltip • Deposit click with WAIT until Payments screen is fully loaded
 // @author       @Bakurki
 // @match        https://zebra.hellomoving.com/wc.dll?*
@@ -9,6 +9,8 @@
 // @downloadURL  https://github.com/AEYLogistics/wcm-dynamic-suite-employee/raw/refs/heads/main/WCM-Dynamic-Suite-Employee.user.js
 // @grant        none
 // ==/UserScript==
+
+// CACHE-BUST 2026-03-10 - forces Tampermonkey to reload fresh version
 
 (function() {
     'use strict';
@@ -250,7 +252,45 @@
         }
     }
 
-    // ====================== CHARGES PAGE ONLY (strict isolation) ======================
+    // ====================== PAYMENTS PAGE – WAIT UNTIL LOADED (strictly isolated at top) ======================
+    if (window.location.href.includes(PAYMENTS_PATH)) {
+        window.addEventListener('load', () => {
+            const amt = localStorage.getItem('autoDepositAmount');
+            const notes = localStorage.getItem('autoDepositNotes');
+
+            if (amt && notes) {
+                let attempts = 0;
+                const maxAttempts = 30;
+
+                const interval = setInterval(() => {
+                    attempts++;
+                    const payAmtField = document.querySelector('input[name="PAYAMT"]');
+                    const notesField = document.querySelector('input[name="NOTES"]');
+                    const reserveCheckbox = document.querySelector('input[name="RSRV"]');
+
+                    if (payAmtField && notesField && reserveCheckbox) {
+                        clearInterval(interval);
+                        if (!localStorage.getItem('updateInProgress')) {
+                            localStorage.setItem('updateInProgress','true');
+                            reserveCheckbox.checked = true;
+                            payAmtField.value = amt;
+                            notesField.value = notes;
+                            if (typeof UpdatePayment === 'function') UpdatePayment();
+                        } else {
+                            if (typeof submitFunction === 'function') submitFunction(3);
+                            localStorage.removeItem('autoDepositAmount');
+                            localStorage.removeItem('autoDepositNotes');
+                            localStorage.removeItem('updateInProgress');
+                        }
+                    }
+
+                    if (attempts >= maxAttempts) clearInterval(interval);
+                }, 100);
+            }
+        });
+    }
+
+    // ====================== CHARGES PAGE ONLY (strict isolation - nothing runs on Payments) ======================
     if (window.location.href.includes(CHARGES_PATH)) {
         let isFullView = localStorage.getItem('wcm-isFullView') !== 'false';
 
@@ -322,12 +362,12 @@
 
             let tooltipColor;
             if (isSummerMode(date)) {
-                headerTitle.textContent = 'WCM Summer Suite v5.37 ☀️';
+                headerTitle.textContent = 'WCM Summer Suite v5.38 ☀️';
                 header.style.background = 'linear-gradient(90deg, #ff7e5f, #feb47b)';
                 header.style.color = '#fff';
                 tooltipColor = '#ff7e5f';
             } else {
-                headerTitle.textContent = 'WCM Suite v5.37 ❄️';
+                headerTitle.textContent = 'WCM Suite v5.38 ❄️';
                 header.style.background = 'linear-gradient(90deg, #0288d1, #81d4fa)';
                 header.style.color = '#fff';
                 tooltipColor = '#0288d1';
@@ -421,43 +461,5 @@
 
         window.addEventListener('load', createPopup);
         setTimeout(() => { if (!document.getElementById('wcm-suite-popup')) createPopup(); }, 800);
-    }
-
-    // ====================== PAYMENTS PAGE – WAIT UNTIL LOADED ======================
-    if (window.location.href.includes(PAYMENTS_PATH)) {
-        window.addEventListener('load', () => {
-            const amt = localStorage.getItem('autoDepositAmount');
-            const notes = localStorage.getItem('autoDepositNotes');
-
-            if (amt && notes) {
-                let attempts = 0;
-                const maxAttempts = 30;
-
-                const interval = setInterval(() => {
-                    attempts++;
-                    const payAmtField = document.querySelector('input[name="PAYAMT"]');
-                    const notesField = document.querySelector('input[name="NOTES"]');
-                    const reserveCheckbox = document.querySelector('input[name="RSRV"]');
-
-                    if (payAmtField && notesField && reserveCheckbox) {
-                        clearInterval(interval);
-                        if (!localStorage.getItem('updateInProgress')) {
-                            localStorage.setItem('updateInProgress','true');
-                            reserveCheckbox.checked = true;
-                            payAmtField.value = amt;
-                            notesField.value = notes;
-                            if (typeof UpdatePayment === 'function') UpdatePayment();
-                        } else {
-                            if (typeof submitFunction === 'function') submitFunction(3);
-                            localStorage.removeItem('autoDepositAmount');
-                            localStorage.removeItem('autoDepositNotes');
-                            localStorage.removeItem('updateInProgress');
-                        }
-                    }
-
-                    if (attempts >= maxAttempts) clearInterval(interval);
-                }, 100);
-            }
-        });
     }
 })();
