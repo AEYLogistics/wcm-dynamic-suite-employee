@@ -1,12 +1,12 @@
 // ==UserScript==
-// @name         WCM Dynamic Suite v5.20 • Employee Edition
+// @name         WCM Dynamic Suite v5.21 • Employee Edition
 // @namespace    http://tampermonkey.net/
-// @version      5.20
-// @description  Exact Admin v3.04 CF math • +5% on Fri/Sat/Sun + last 3 days of month + all national holidays • Summer +15% (additional) • Peak Rate tooltip now right-edge aligned at bottom-left of pointer (fully left of cursor) • 210px width • Starts maximized • Side-by-side buttons
+// @version      5.21
+// @description  Exact Admin v3.04 CF math • +5% on Fri/Sat/Sun + last 3 days of month + all national holidays • Summer +15% (additional) • Peak Rate tooltip right-edge aligned • 210px width • Starts maximized • Side-by-side buttons
 // @author       @Bakurki
 // @match        https://zebra.hellomoving.com/wc.dll?*
-// @updateURL    https://raw.githubusercontent.com/YOUR-USERNAME/wcm-dynamic-suite-employee/main/WCM-Dynamic-Suite-Employee.user.js
-// @downloadURL  https://raw.githubusercontent.com/YOUR-USERNAME/wcm-dynamic-suite-employee/main/WCM-Dynamic-Suite-Employee.user.js
+// @updateURL    https://github.com/AEYLogistics/wcm-dynamic-suite-employee/raw/refs/heads/main/WCM-Dynamic-Suite-Employee.user.js
+// @downloadURL  https://github.com/AEYLogistics/wcm-dynamic-suite-employee/raw/refs/heads/main/WCM-Dynamic-Suite-Employee.user.js
 // @grant        none
 // ==/UserScript==
 
@@ -267,12 +267,12 @@
 
         let headerColor, tooltipColor;
         if (isSummerMode(date)) {
-            headerTitle.textContent = 'WCM Summer Suite v5.20 ☀️';
+            headerTitle.textContent = 'WCM Summer Suite v5.21 ☀️';
             header.style.background = 'linear-gradient(90deg, #ff7e5f, #feb47b)';
             header.style.color = '#fff';
             tooltipColor = '#ff7e5f';
         } else {
-            headerTitle.textContent = 'WCM Suite v5.20 ❄️';
+            headerTitle.textContent = 'WCM Suite v5.21 ❄️';
             header.style.background = 'linear-gradient(90deg, #0288d1, #81d4fa)';
             header.style.color = '#fff';
             tooltipColor = '#0288d1';
@@ -326,7 +326,6 @@
             if (typeof submitFunction === 'function') submitFunction(4);
         };
 
-        // Peak Rate tooltip — right edge at bottom-left of pointer
         const tooltip = document.getElementById('wcm-peak-tooltip');
         const peakBadges = document.querySelectorAll('.wcm-peak');
         peakBadges.forEach(badge => {
