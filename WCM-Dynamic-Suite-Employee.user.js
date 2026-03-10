@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         WCM Dynamic Suite v5.34 • Employee Edition
+// @name         WCM Dynamic Suite v5.35 • Employee Edition
 // @namespace    http://tampermonkey.net/
-// @version      5.34
+// @version      5.35
 // @description  Exact Admin v3.04 CF math • +5% on Fri/Sat/Sun + last 3 days of month + all national holidays • Summer +15% (additional) • Enhanced holiday banner (X days before) • Peak Rate tooltip right-edge aligned + high-contrast • Esign Required tooltip • Deposit click with WAIT until Payments screen is fully loaded
 // @author       @Bakurki
 // @match        https://zebra.hellomoving.com/wc.dll?*
@@ -164,7 +164,6 @@
         return messages.length ? messages.join('<br>') : '';
     }
 
-    // ====================== CALCULATIONS ======================
     function calculateDeposit() {
         const subtotalTds = document.querySelectorAll('td.TD7[align="right"][colspan="4"]');
         let subtotalText = subtotalTds.length ? subtotalTds[0].nextElementSibling.querySelector('b')?.textContent.trim() || '0' : '0';
@@ -323,12 +322,12 @@
 
             let tooltipColor;
             if (isSummerMode(date)) {
-                headerTitle.textContent = 'WCM Summer Suite v5.34 ☀️';
+                headerTitle.textContent = 'WCM Summer Suite v5.35 ☀️';
                 header.style.background = 'linear-gradient(90deg, #ff7e5f, #feb47b)';
                 header.style.color = '#fff';
                 tooltipColor = '#ff7e5f';
             } else {
-                headerTitle.textContent = 'WCM Suite v5.34 ❄️';
+                headerTitle.textContent = 'WCM Suite v5.35 ❄️';
                 header.style.background = 'linear-gradient(90deg, #0288d1, #81d4fa)';
                 header.style.color = '#fff';
                 tooltipColor = '#0288d1';
@@ -434,9 +433,8 @@
             const notes = localStorage.getItem('autoDepositNotes');
 
             if (amt && notes) {
-                // Polling wait until fields are present (up to 3 seconds)
                 let attempts = 0;
-                const maxAttempts = 30; // 3 seconds
+                const maxAttempts = 30;
 
                 const interval = setInterval(() => {
                     attempts++;
@@ -446,7 +444,6 @@
 
                     if (payAmtField && notesField && reserveCheckbox) {
                         clearInterval(interval);
-                        console.log('DEBUG: Payments fields ready after', attempts * 100, 'ms');
                         if (!localStorage.getItem('updateInProgress')) {
                             localStorage.setItem('updateInProgress','true');
                             reserveCheckbox.checked = true;
@@ -461,10 +458,7 @@
                         }
                     }
 
-                    if (attempts >= maxAttempts) {
-                        clearInterval(interval);
-                        console.log('DEBUG: Payments fields never appeared – giving up');
-                    }
+                    if (attempts >= maxAttempts) clearInterval(interval);
                 }, 100);
             }
         });
