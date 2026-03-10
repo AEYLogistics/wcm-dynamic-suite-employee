@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         WCM Dynamic Suite v5.24 • Employee Edition
+// @name         WCM Dynamic Suite v5.28 • Employee Edition
 // @namespace    http://tampermonkey.net/
-// @version      5.24
-// @description  Exact Admin v3.04 CF math • +5% on Fri/Sat/Sun + last 3 days of month + all national holidays • Summer +15% (additional) • Peak Rate tooltip right-edge aligned • "Esign Received" required before "Book This Job" button can be clicked + hover tooltip
+// @version      5.28
+// @description  Exact Admin v3.04 CF math • +5% on Fri/Sat/Sun + last 3 days of month + all national holidays • Summer +15% (additional) • Enhanced holiday banner (X days before) • Peak Rate tooltip right-edge aligned + FIXED (high-contrast + seasonal header color match) • Esign Received required before "Book This Job" button can be clicked • CF click alert removed
 // @author       @Bakurki
 // @match        https://zebra.hellomoving.com/wc.dll?*
 // @updateURL    https://github.com/AEYLogistics/wcm-dynamic-suite-employee/raw/refs/heads/main/WCM-Dynamic-Suite-Employee.user.js
@@ -33,6 +33,7 @@
         #wcm-peak-tooltip {
             position: fixed; z-index: 100000; padding: 8px 12px; border-radius: 6px; font-size: 11.5px; white-space: nowrap;
             box-shadow: 0 6px 16px rgba(0,0,0,0.25); pointer-events: none; opacity: 0; transition: opacity .15s;
+            color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.6);
         }
 
         .wcm-alert { background:#fff3cd; color:#856404; padding:6px; margin-bottom:8px; border-radius:7px; font-size:11px; text-align:center; border:1px solid #ffeaa7; }
@@ -78,26 +79,38 @@
         return date.getDate() >= lastDay - 2;
     }
 
+    // ====================== HOLIDAY SYSTEM ======================
     function getHolidayInfo(date) {
-        if (!date) return { isHoliday: false, name: '' };
+        if (!date) return { isHoliday: false, name: '', emoji: '', isFederal: false };
         const m = date.getMonth() + 1;
         const d = date.getDate();
         const dow = date.getDay();
         const year = date.getFullYear();
 
-        if (m === 1 && d === 1) return { isHoliday: true, name: "New Year’s" };
-        if (m === 6 && d === 19) return { isHoliday: true, name: "Juneteenth" };
-        if (m === 7 && d === 4) return { isHoliday: true, name: "July 4th" };
-        if (m === 11 && d === 11) return { isHoliday: true, name: "Veterans Day" };
-        if (m === 12 && d === 25) return { isHoliday: true, name: "Christmas" };
+        // FEDERAL HOLIDAYS (surcharge applies)
+        if (m === 1 && d === 1) return { isHoliday: true, name: "New Year’s", emoji: "🎉", isFederal: true };
+        if (m === 1 && dow === 1 && d >= 15 && d <= 21) return { isHoliday: true, name: "MLK Day", emoji: "✊", isFederal: true };
+        if (m === 2 && dow === 1 && d >= 15 && d <= 21) return { isHoliday: true, name: "Presidents’ Day", emoji: "🏛️", isFederal: true };
+        if (m === 5 && dow === 1 && d >= 25) return { isHoliday: true, name: "Memorial Day", emoji: "🎗️", isFederal: true };
+        if (m === 6 && d === 19) return { isHoliday: true, name: "Juneteenth", emoji: "🖤", isFederal: true };
+        if (m === 7 && d === 4) return { isHoliday: true, name: "Independence Day", emoji: "🎆", isFederal: true };
+        if (m === 9 && dow === 1 && d <= 7) return { isHoliday: true, name: "Labor Day", emoji: "🛠️", isFederal: true };
+        if (m === 10 && dow === 1 && d >= 8 && d <= 14) return { isHoliday: true, name: "Columbus Day", emoji: "🗺️", isFederal: true };
+        if (m === 11 && d === 11) return { isHoliday: true, name: "Veterans Day", emoji: "🎖️", isFederal: true };
+        if (m === 11 && dow === 4 && d >= 22 && d <= 28) return { isHoliday: true, name: "Thanksgiving", emoji: "🦃", isFederal: true };
+        if (m === 12 && d === 25) return { isHoliday: true, name: "Christmas", emoji: "🎄", isFederal: true };
 
-        if (m === 1 && dow === 1 && d >= 15 && d <= 21) return { isHoliday: true, name: "MLK Day" };
-        if (m === 5 && dow === 1 && d >= 25) return { isHoliday: true, name: "Memorial Day" };
-        if (m === 9 && dow === 1 && d <= 7) return { isHoliday: true, name: "Labor Day" };
-        if (m === 10 && dow === 1 && d >= 8 && d <= 14) return { isHoliday: true, name: "Columbus Day" };
-        if (m === 11 && dow === 4 && d >= 22 && d <= 28) return { isHoliday: true, name: "Thanksgiving" };
+        // OTHER MAJOR HOLIDAYS (no surcharge)
+        if (m === 2 && d === 14) return { isHoliday: true, name: "Valentine’s Day", emoji: "❤️", isFederal: false };
+        if (m === 3 && d === 17) return { isHoliday: true, name: "St. Patrick’s Day", emoji: "🍀", isFederal: false };
+        if (m === 5 && d === 5) return { isHoliday: true, name: "Cinco de Mayo", emoji: "🍹", isFederal: false };
+        if (m === 10 && d === 31) return { isHoliday: true, name: "Halloween", emoji: "🎃", isFederal: false };
+        if (m === 12 && d === 31) return { isHoliday: true, name: "New Year’s Eve", emoji: "🎊", isFederal: false };
+        if ((m === 3 && d >= 22 && d <= 31) || (m === 4 && d >= 1 && d <= 25)) return { isHoliday: true, name: "Easter", emoji: "🐰", isFederal: false };
+        if (m === 5 && dow === 0 && d >= 8 && d <= 14) return { isHoliday: true, name: "Mother’s Day", emoji: "💐", isFederal: false };
+        if (m === 6 && dow === 0 && d >= 15 && d <= 21) return { isHoliday: true, name: "Father’s Day", emoji: "👔", isFederal: false };
 
-        return { isHoliday: false, name: '' };
+        return { isHoliday: false, name: '', emoji: '', isFederal: false };
     }
 
     function getPeakReason(date) {
@@ -116,6 +129,42 @@
         if (isFriSatSun(date) || isLastThreeDaysOfMonth(date) || getHolidayInfo(date).isHoliday) multiplier *= 1.05;
         if (isSummerMode(date)) multiplier *= 1.15;
         return multiplier;
+    }
+
+    // ====================== PICKUP DATE ALERT ======================
+    function getAlerts() {
+        const pickup = getPickupDate();
+        let messages = [];
+        if (!pickup) return '';
+
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        pickup.setHours(0,0,0,0);
+        const diffDays = Math.ceil((pickup - today) / (1000*60*60*24));
+
+        if (diffDays < 0) messages.push('⚠️ PICKUP DATE IN THE PAST!');
+        else if (diffDays <= 2) messages.push(`⚠️ Pickup in ${diffDays} day${diffDays===1?'':'s'} — act fast!`);
+
+        for (let offset = 0; offset <= 2; offset++) {
+            const checkDate = new Date(pickup);
+            checkDate.setDate(checkDate.getDate() + offset);
+            const hol = getHolidayInfo(checkDate);
+            if (hol.isHoliday) {
+                let msg;
+                if (offset === 0) {
+                    msg = hol.isFederal
+                        ? `${hol.emoji} ${hol.name} – Holiday surcharge applies!`
+                        : `${hol.emoji} ${hol.name}`;
+                } else {
+                    const dayWord = offset === 1 ? 'day' : 'days';
+                    const surcharge = hol.isFederal ? ' – Holiday surcharge applies!' : '';
+                    msg = `${hol.emoji} ${offset} ${dayWord} before ${hol.name}${surcharge}`;
+                }
+                messages.push(msg);
+                break;
+            }
+        }
+        return messages.length ? messages.join('<br>') : '';
     }
 
     // ====================== CALCULATIONS ======================
@@ -182,25 +231,7 @@
         return { cf, miles, pricePerCf, isPeakRate: !!peakReason, peakReason };
     }
 
-    // ====================== PICKUP DATE ALERT ======================
-    function getAlerts() {
-        const date = getPickupDate();
-        let messages = [];
-        if (date) {
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            date.setHours(0,0,0,0);
-            const diffDays = Math.ceil((date - today) / (1000*60*60*24));
-            if (diffDays < 0) messages.push('⚠️ PICKUP DATE IN THE PAST!');
-            else if (diffDays <= 2) messages.push(`⚠️ Pickup in ${diffDays} day${diffDays===1?'':'s'} — act fast!`);
-
-            const hol = getHolidayInfo(date);
-            if (hol.isHoliday) messages.push(`🎉 ${hol.name} – Holiday surcharge applies!`);
-        }
-        return messages.length ? messages.join('<br>') : '';
-    }
-
-    // ====================== ESIGN CHECK & BUTTON DISABLE + TOOLTIP ======================
+    // ====================== ESIGN CHECK ======================
     function checkEsignStatus() {
         const bookButton = Array.from(document.querySelectorAll('input[type="button"], button'))
             .find(el => el.value && el.value.includes('Book This Job'));
@@ -214,16 +245,16 @@
             bookButton.disabled = false;
             bookButton.style.opacity = '1';
             bookButton.style.cursor = 'pointer';
-            bookButton.title = '';                    // remove tooltip
+            bookButton.title = '';
         } else {
             bookButton.disabled = true;
             bookButton.style.opacity = '0.5';
             bookButton.style.cursor = 'not-allowed';
-            bookButton.title = 'Esign Required Before Booking';   // hover tooltip
+            bookButton.title = 'Esign Required Before Booking';
         }
     }
 
-    // ====================== COMPACT POPUP (STARTS MAXIMIZED) ======================
+    // ====================== COMPACT POPUP ======================
     let isFullView = true;
 
     function createPopup() {
@@ -273,9 +304,8 @@
         };
 
         renderContent(popup);
-        checkEsignStatus(); // initial check
+        checkEsignStatus();
 
-        // Re-check every time the page changes
         const observer = new MutationObserver(checkEsignStatus);
         observer.observe(document.body, { childList: true, subtree: true });
     }
@@ -293,21 +323,20 @@
         const header = popup.querySelector('#wcm-suite-header');
         const tooltip = document.getElementById('wcm-peak-tooltip');
 
-        let headerColor, tooltipColor;
+        // RESTORED SEASONAL TOOLTIP COLOR (high-contrast + header match)
+        let tooltipColor;
         if (isSummerMode(date)) {
-            headerTitle.textContent = 'WCM Summer Suite v5.24 ☀️';
+            headerTitle.textContent = 'WCM Summer Suite v5.28 ☀️';
             header.style.background = 'linear-gradient(90deg, #ff7e5f, #feb47b)';
             header.style.color = '#fff';
             tooltipColor = '#ff7e5f';
         } else {
-            headerTitle.textContent = 'WCM Suite v5.24 ❄️';
+            headerTitle.textContent = 'WCM Suite v5.28 ❄️';
             header.style.background = 'linear-gradient(90deg, #0288d1, #81d4fa)';
             header.style.color = '#fff';
             tooltipColor = '#0288d1';
         }
-
         tooltip.style.background = tooltipColor;
-        tooltip.style.color = '#fff';
 
         const html = isFullView ? `
             ${alertHTML}
@@ -354,12 +383,13 @@
             if (typeof submitFunction === 'function') submitFunction(4);
         };
 
+        // FIXED PEAK TOOLTIP (re-attached every render + high-contrast)
         const tooltip = document.getElementById('wcm-peak-tooltip');
         const peakBadges = document.querySelectorAll('.wcm-peak');
         peakBadges.forEach(badge => {
             badge.onmousemove = (e) => {
-                tooltip.textContent = badge.getAttribute('data-reason');
-                const width = tooltip.offsetWidth;
+                tooltip.textContent = badge.getAttribute('data-reason') || 'Peak Rate Active';
+                const width = tooltip.offsetWidth || 140;
                 tooltip.style.left = (e.pageX - width - 12) + 'px';
                 tooltip.style.top = (e.pageY + 18) + 'px';
                 tooltip.style.opacity = '1';
@@ -367,6 +397,7 @@
             badge.onmouseleave = () => tooltip.style.opacity = '0';
         });
 
+        // CF CLICK – NO ALERT
         const cfPriceEls = document.querySelectorAll('.wcm-cf');
         cfPriceEls.forEach(el => {
             el.onclick = () => {
@@ -382,8 +413,6 @@
                 if (extraText) extraText.value = 'Origin and Destination';
 
                 if (submitBtn) setTimeout(() => submitBtn.click(), 300);
-
-                alert('✅ CF Price auto-filled\nBinding set to "Binding"\nOrigin and Destination added\nSubmit Charges clicked!');
             };
         });
     }
