@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         WCM Dynamic Suite v5.36 • Employee Edition
+// @name         WCM Dynamic Suite v5.37 • Employee Edition
 // @namespace    http://tampermonkey.net/
-// @version      5.36
+// @version      5.37
 // @description  Exact Admin v3.04 CF math • +5% on Fri/Sat/Sun + last 3 days of month + all national holidays • Summer +15% (additional) • Enhanced holiday banner (X days before) • Peak Rate tooltip right-edge aligned + high-contrast • Esign Required tooltip • Deposit click with WAIT until Payments screen is fully loaded
 // @author       @Bakurki
 // @match        https://zebra.hellomoving.com/wc.dll?*
@@ -44,45 +44,213 @@
     `;
     document.head.appendChild(style);
 
-    // ====================== PAYMENTS PAGE – WAIT UNTIL LOADED (strictly isolated) ======================
-    if (window.location.href.includes(PAYMENTS_PATH)) {
-        window.addEventListener('load', () => {
-            const amt = localStorage.getItem('autoDepositAmount');
-            const notes = localStorage.getItem('autoDepositNotes');
-
-            if (amt && notes) {
-                let attempts = 0;
-                const maxAttempts = 30;
-
-                const interval = setInterval(() => {
-                    attempts++;
-                    const payAmtField = document.querySelector('input[name="PAYAMT"]');
-                    const notesField = document.querySelector('input[name="NOTES"]');
-                    const reserveCheckbox = document.querySelector('input[name="RSRV"]');
-
-                    if (payAmtField && notesField && reserveCheckbox) {
-                        clearInterval(interval);
-                        if (!localStorage.getItem('updateInProgress')) {
-                            localStorage.setItem('updateInProgress','true');
-                            reserveCheckbox.checked = true;
-                            payAmtField.value = amt;
-                            notesField.value = notes;
-                            if (typeof UpdatePayment === 'function') UpdatePayment();
-                        } else {
-                            if (typeof submitFunction === 'function') submitFunction(3);
-                            localStorage.removeItem('autoDepositAmount');
-                            localStorage.removeItem('autoDepositNotes');
-                            localStorage.removeItem('updateInProgress');
-                        }
-                    }
-
-                    if (attempts >= maxAttempts) clearInterval(interval);
-                }, 100);
-            }
-        });
+    // ====================== DATE HELPERS ======================
+    function getPickupDate() {
+        const el = document.querySelector('input[name="PUDTE"]');
+        if (!el || !el.value) return null;
+        const [m, d, y] = el.value.split('/');
+        return new Date(y, m-1, d);
     }
 
-    // ====================== CHARGES PAGE ONLY (strict isolation – nothing runs on Payments) ======================
+    function getLaborDay(year) {
+        let d = new Date(year, 8, 1);
+        while (d.getDay() !== 1) d.setDate(d.getDate() + 1);
+        return d;
+    }
+
+    function isSummerMode(date) {
+        if (!date) return false;
+        const year = date.getFullYear();
+        const summerStart = new Date(year, 3, 1);
+        const laborDay = getLaborDay(year);
+        const summerEnd = new Date(laborDay); summerEnd.setDate(summerEnd.getDate() + 1);
+        return date >= summerStart && date <= summerEnd;
+    }
+
+    function isFriSatSun(date) {
+        if (!date) return false;
+        const dow = date.getDay();
+        return dow === 5 || dow === 6 || dow === 0;
+    }
+
+    function isLastThreeDaysOfMonth(date) {
+        if (!date) return false;
+        const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+        return date.getDate() >= lastDay - 2;
+    }
+
+    // ====================== HOLIDAY SYSTEM ======================
+    function getHolidayInfo(date) {
+        if (!date) return { isHoliday: false, name: '', emoji: '', isFederal: false };
+        const m = date.getMonth() + 1;
+        const d = date.getDate();
+        const dow = date.getDay();
+        const year = date.getFullYear();
+
+        if (m === 1 && d === 1) return { isHoliday: true, name: "New Year’s", emoji: "🎉", isFederal: true };
+        if (m === 1 && dow === 1 && d >= 15 && d <= 21) return { isHoliday: true, name: "MLK Day", emoji: "✊", isFederal: true };
+        if (m === 2 && dow === 1 && d >= 15 && d <= 21) return { isHoliday: true, name: "Presidents’ Day", emoji: "🏛️", isFederal: true };
+        if (m === 5 && dow === 1 && d >= 25) return { isHoliday: true, name: "Memorial Day", emoji: "🎗️", isFederal: true };
+        if (m === 6 && d === 19) return { isHoliday: true, name: "Juneteenth", emoji: "🖤", isFederal: true };
+        if (m === 7 && d === 4) return { isHoliday: true, name: "Independence Day", emoji: "🎆", isFederal: true };
+        if (m === 9 && dow === 1 && d <= 7) return { isHoliday: true, name: "Labor Day", emoji: "🛠️", isFederal: true };
+        if (m === 10 && dow === 1 && d >= 8 && d <= 14) return { isHoliday: true, name: "Columbus Day", emoji: "🗺️", isFederal: true };
+        if (m === 11 && d === 11) return { isHoliday: true, name: "Veterans Day", emoji: "🎖️", isFederal: true };
+        if (m === 11 && dow === 4 && d >= 22 && d <= 28) return { isHoliday: true, name: "Thanksgiving", emoji: "🦃", isFederal: true };
+        if (m === 12 && d === 25) return { isHoliday: true, name: "Christmas", emoji: "🎄", isFederal: true };
+
+        if (m === 2 && d === 14) return { isHoliday: true, name: "Valentine’s Day", emoji: "❤️", isFederal: false };
+        if (m === 3 && d === 17) return { isHoliday: true, name: "St. Patrick’s Day", emoji: "🍀", isFederal: false };
+        if (m === 5 && d === 5) return { isHoliday: true, name: "Cinco de Mayo", emoji: "🍹", isFederal: false };
+        if (m === 10 && d === 31) return { isHoliday: true, name: "Halloween", emoji: "🎃", isFederal: false };
+        if (m === 12 && d === 31) return { isHoliday: true, name: "New Year’s Eve", emoji: "🎊", isFederal: false };
+        if ((m === 3 && d >= 22 && d <= 31) || (m === 4 && d >= 1 && d <= 25)) return { isHoliday: true, name: "Easter", emoji: "🐰", isFederal: false };
+        if (m === 5 && dow === 0 && d >= 8 && d <= 14) return { isHoliday: true, name: "Mother’s Day", emoji: "💐", isFederal: false };
+        if (m === 6 && dow === 0 && d >= 15 && d <= 21) return { isHoliday: true, name: "Father’s Day", emoji: "👔", isFederal: false };
+
+        return { isHoliday: false, name: '', emoji: '', isFederal: false };
+    }
+
+    function getPeakReason(date) {
+        if (!date) return '';
+        let reasons = [];
+        if (isFriSatSun(date)) reasons.push('Weekend');
+        if (isLastThreeDaysOfMonth(date)) reasons.push('End of Month');
+        const hol = getHolidayInfo(date);
+        if (hol.isHoliday) reasons.push(hol.name);
+        return reasons.length ? reasons.join(' + ') : '';
+    }
+
+    function getSurchargeMultiplier(date) {
+        if (!date) return 1.0;
+        let multiplier = 1.0;
+        if (isFriSatSun(date) || isLastThreeDaysOfMonth(date) || getHolidayInfo(date).isHoliday) multiplier *= 1.05;
+        if (isSummerMode(date)) multiplier *= 1.15;
+        return multiplier;
+    }
+
+    function getAlerts() {
+        const pickup = getPickupDate();
+        let messages = [];
+        if (!pickup) return '';
+
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        pickup.setHours(0,0,0,0);
+        const diffDays = Math.ceil((pickup - today) / (1000*60*60*24));
+
+        if (diffDays < 0) messages.push('⚠️ PICKUP DATE IN THE PAST!');
+        else if (diffDays <= 2) messages.push(`⚠️ Pickup in ${diffDays} day${diffDays===1?'':'s'} — act fast!`);
+
+        for (let offset = 0; offset <= 2; offset++) {
+            const checkDate = new Date(pickup);
+            checkDate.setDate(checkDate.getDate() + offset);
+            const hol = getHolidayInfo(checkDate);
+            if (hol.isHoliday) {
+                let msg;
+                if (offset === 0) {
+                    msg = hol.isFederal 
+                        ? `${hol.emoji} ${hol.name} – Holiday surcharge applies!`
+                        : `${hol.emoji} ${hol.name}`;
+                } else {
+                    const dayWord = offset === 1 ? 'day' : 'days';
+                    const surcharge = hol.isFederal ? ' – Holiday surcharge applies!' : '';
+                    msg = `${hol.emoji} ${offset} ${dayWord} before ${hol.name}${surcharge}`;
+                }
+                messages.push(msg);
+                break;
+            }
+        }
+        return messages.length ? messages.join('<br>') : '';
+    }
+
+    function calculateDeposit() {
+        const subtotalTds = document.querySelectorAll('td.TD7[align="right"][colspan="4"]');
+        let subtotalText = subtotalTds.length ? subtotalTds[0].nextElementSibling.querySelector('b')?.textContent.trim() || '0' : '0';
+        const subtotal = parseFloat(subtotalText.replace(/[$,]/g, '')) || 0;
+        const extra = parseFloat(document.querySelector('input[name="EXTRA1AMT"]')?.value || 0) || 0;
+        const discount = parseFloat(document.querySelector('input[name="DISCOUNT"]')?.value || 0) || 0;
+        const deposit = subtotal * 0.2 + extra - discount;
+        let totalEstimate = 0;
+        document.querySelectorAll('td[colspan="4"]').forEach(td => {
+            if (td.textContent.includes('Total Estimate')) totalEstimate = parseFloat(td.nextElementSibling.querySelector('b')?.textContent.replace(/[$,]/g,'') || 0);
+        });
+        const remaining = totalEstimate - deposit;
+        const split = remaining / 2;
+        const ccFee = deposit * 0.046;
+        return { subtotal: subtotal.toFixed(2), extra: extra.toFixed(2), discount: discount.toFixed(2), deposit: deposit.toFixed(2), totalEstimate: totalEstimate.toFixed(2), remaining: remaining.toFixed(2), split: split.toFixed(2), ccFee: ccFee.toFixed(2), rawDeposit: deposit };
+    }
+
+    function calculateCF() {
+        let cfInput = document.querySelector('input[name="CFLBS"]');
+        let cf = cfInput ? parseFloat(cfInput.value) || 0 : 0;
+
+        let distanceTd = Array.from(document.querySelectorAll('td.TD2')).find(td => td.textContent.includes('Distance:'));
+        let miles = 0;
+        if (distanceTd) {
+            let text = distanceTd.textContent;
+            let match = text.match(/Distance:\s*(\d+)\s*Miles/);
+            if (match) miles = parseInt(match[1]);
+        }
+
+        let pricePerCf = 'Invalid';
+        const date = getPickupDate();
+        if (cf > 0 && miles > 0) {
+            const p_short_300 = 2.13;
+            const slope_short = -0.2 / 700;
+            const p_long_300 = 3.75;
+            const slope_long = -0.5 / 700;
+            const delta = Math.max(0, Math.floor((cf - 300) / 75) * 75);
+            let p_short = p_short_300 + slope_short * delta;
+            let p_long = p_long_300 + slope_long * delta;
+            p_short = Math.max(p_short, 0);
+            p_long = Math.max(p_long, 0);
+
+            const mi_min = 5;
+            const mi_max = 1970;
+            let frac = (miles - mi_min) / (mi_max - mi_min);
+            frac = Math.max(0, Math.min(1, frac));
+            let price = p_short + frac * (p_long - p_short);
+
+            let minPrice = 1.60;
+            if (miles > 2000) minPrice = 2.75;
+            else if (miles > 1000) minPrice = 2.25;
+            else if (miles < 100) minPrice = 1.00;
+
+            price = Math.max(minPrice, Math.min(4.75, price));
+            const multiplier = getSurchargeMultiplier(date);
+            price = price * multiplier;
+            price = Math.round(price / 0.05) * 0.05;
+            pricePerCf = '$' + price.toFixed(2);
+        }
+        const peakReason = getPeakReason(date);
+        return { cf, miles, pricePerCf, isPeakRate: !!peakReason, peakReason };
+    }
+
+    // ====================== ESIGN CHECK ======================
+    function checkEsignStatus() {
+        const bookButton = Array.from(document.querySelectorAll('input[type="button"], button'))
+            .find(el => el.value && el.value.includes('Book This Job'));
+
+        if (!bookButton) return;
+
+        const esignRow = document.querySelector('tr[style*="font-family:Arial;font-size:10pt;"]');
+        const hasEsignReceived = esignRow && esignRow.textContent.includes('Esign Received');
+
+        if (hasEsignReceived) {
+            bookButton.disabled = false;
+            bookButton.style.opacity = '1';
+            bookButton.style.cursor = 'pointer';
+            bookButton.title = '';
+        } else {
+            bookButton.disabled = true;
+            bookButton.style.opacity = '0.5';
+            bookButton.style.cursor = 'not-allowed';
+            bookButton.title = 'Esign Required Before Booking';
+        }
+    }
+
+    // ====================== CHARGES PAGE ONLY (strict isolation) ======================
     if (window.location.href.includes(CHARGES_PATH)) {
         let isFullView = localStorage.getItem('wcm-isFullView') !== 'false';
 
@@ -154,12 +322,12 @@
 
             let tooltipColor;
             if (isSummerMode(date)) {
-                headerTitle.textContent = 'WCM Summer Suite v5.36 ☀️';
+                headerTitle.textContent = 'WCM Summer Suite v5.37 ☀️';
                 header.style.background = 'linear-gradient(90deg, #ff7e5f, #feb47b)';
                 header.style.color = '#fff';
                 tooltipColor = '#ff7e5f';
             } else {
-                headerTitle.textContent = 'WCM Suite v5.36 ❄️';
+                headerTitle.textContent = 'WCM Suite v5.37 ❄️';
                 header.style.background = 'linear-gradient(90deg, #0288d1, #81d4fa)';
                 header.style.color = '#fff';
                 tooltipColor = '#0288d1';
@@ -253,5 +421,43 @@
 
         window.addEventListener('load', createPopup);
         setTimeout(() => { if (!document.getElementById('wcm-suite-popup')) createPopup(); }, 800);
+    }
+
+    // ====================== PAYMENTS PAGE – WAIT UNTIL LOADED ======================
+    if (window.location.href.includes(PAYMENTS_PATH)) {
+        window.addEventListener('load', () => {
+            const amt = localStorage.getItem('autoDepositAmount');
+            const notes = localStorage.getItem('autoDepositNotes');
+
+            if (amt && notes) {
+                let attempts = 0;
+                const maxAttempts = 30;
+
+                const interval = setInterval(() => {
+                    attempts++;
+                    const payAmtField = document.querySelector('input[name="PAYAMT"]');
+                    const notesField = document.querySelector('input[name="NOTES"]');
+                    const reserveCheckbox = document.querySelector('input[name="RSRV"]');
+
+                    if (payAmtField && notesField && reserveCheckbox) {
+                        clearInterval(interval);
+                        if (!localStorage.getItem('updateInProgress')) {
+                            localStorage.setItem('updateInProgress','true');
+                            reserveCheckbox.checked = true;
+                            payAmtField.value = amt;
+                            notesField.value = notes;
+                            if (typeof UpdatePayment === 'function') UpdatePayment();
+                        } else {
+                            if (typeof submitFunction === 'function') submitFunction(3);
+                            localStorage.removeItem('autoDepositAmount');
+                            localStorage.removeItem('autoDepositNotes');
+                            localStorage.removeItem('updateInProgress');
+                        }
+                    }
+
+                    if (attempts >= maxAttempts) clearInterval(interval);
+                }, 100);
+            }
+        });
     }
 })();
