@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         WCM Dynamic Suite v5.29 • Employee Edition
+// @name         WCM Dynamic Suite v5.31 • Employee Edition
 // @namespace    http://tampermonkey.net/
-// @version      5.29
-// @description  Exact Admin v3.04 CF math • +5% on Fri/Sat/Sun + last 3 days of month + all national holidays • Summer +15% (additional) • Enhanced holiday banner (X days before) • Peak Rate tooltip right-edge aligned + high-contrast • Esign Required tooltip • Deposit click FIXED • Popup min/max state now persists after refresh
+// @version      5.31
+// @description  Exact Admin v3.04 CF math • +5% on Fri/Sat/Sun + last 3 days of month + all national holidays • Summer +15% (additional) • Enhanced holiday banner (X days before) • Peak Rate tooltip right-edge aligned + high-contrast • Esign Required tooltip • Deposit click FIXED (stable after updates) • Popup min/max state persists
 // @author       @Bakurki
 // @match        https://zebra.hellomoving.com/wc.dll?*
 // @updateURL    https://github.com/AEYLogistics/wcm-dynamic-suite-employee/raw/refs/heads/main/WCM-Dynamic-Suite-Employee.user.js
@@ -15,6 +15,7 @@
 
     const CHARGES_PATH = 'mpcharge~chargeswc~';
     const PAYMENTS_PATH = 'mpopr~paymentswc~';
+    const VERSION = '5.31';
 
     // ====================== 210px ULTRA-COMPACT CSS ======================
     const style = document.createElement('style');
@@ -87,7 +88,6 @@
         const dow = date.getDay();
         const year = date.getFullYear();
 
-        // FEDERAL HOLIDAYS
         if (m === 1 && d === 1) return { isHoliday: true, name: "New Year’s", emoji: "🎉", isFederal: true };
         if (m === 1 && dow === 1 && d >= 15 && d <= 21) return { isHoliday: true, name: "MLK Day", emoji: "✊", isFederal: true };
         if (m === 2 && dow === 1 && d >= 15 && d <= 21) return { isHoliday: true, name: "Presidents’ Day", emoji: "🏛️", isFederal: true };
@@ -100,7 +100,6 @@
         if (m === 11 && dow === 4 && d >= 22 && d <= 28) return { isHoliday: true, name: "Thanksgiving", emoji: "🦃", isFederal: true };
         if (m === 12 && d === 25) return { isHoliday: true, name: "Christmas", emoji: "🎄", isFederal: true };
 
-        // OTHER HOLIDAYS
         if (m === 2 && d === 14) return { isHoliday: true, name: "Valentine’s Day", emoji: "❤️", isFederal: false };
         if (m === 3 && d === 17) return { isHoliday: true, name: "St. Patrick’s Day", emoji: "🍀", isFederal: false };
         if (m === 5 && d === 5) return { isHoliday: true, name: "Cinco de Mayo", emoji: "🍹", isFederal: false };
@@ -131,7 +130,6 @@
         return multiplier;
     }
 
-    // ====================== PICKUP DATE ALERT ======================
     function getAlerts() {
         const pickup = getPickupDate();
         let messages = [];
@@ -254,8 +252,8 @@
         }
     }
 
-    // ====================== COMPACT POPUP (STATE NOW PERSISTS) ======================
-    let isFullView = localStorage.getItem('wcm-isFullView') !== 'false';   // default expanded
+    // ====================== COMPACT POPUP ======================
+    let isFullView = localStorage.getItem('wcm-isFullView') !== 'false';
 
     function createPopup() {
         if (document.getElementById('wcm-suite-popup')) return;
@@ -284,7 +282,7 @@
         tooltip.id = 'wcm-peak-tooltip';
         document.body.appendChild(tooltip);
 
-        let pos1=0,pos2=0,pos3=0,pos4=0;
+        let pos1=0, pos2=0, pos3=0, pos4=0;
         const header = popup.querySelector('#wcm-suite-header');
         header.onmousedown = e => {
             if (e.target.id === 'wcm-close' || e.target.id === 'wcm-toggle') return;
@@ -325,12 +323,12 @@
 
         let tooltipColor;
         if (isSummerMode(date)) {
-            headerTitle.textContent = 'WCM Summer Suite v5.29 ☀️';
+            headerTitle.textContent = 'WCM Summer Suite v5.31 ☀️';
             header.style.background = 'linear-gradient(90deg, #ff7e5f, #feb47b)';
             header.style.color = '#fff';
             tooltipColor = '#ff7e5f';
         } else {
-            headerTitle.textContent = 'WCM Suite v5.29 ❄️';
+            headerTitle.textContent = 'WCM Suite v5.31 ❄️';
             header.style.background = 'linear-gradient(90deg, #0288d1, #81d4fa)';
             header.style.color = '#fff';
             tooltipColor = '#0288d1';
@@ -371,21 +369,25 @@
 
         document.getElementById('wcm-toggle').onclick = function() {
             isFullView = !isFullView;
-            localStorage.setItem('wcm-isFullView', isFullView);   // <--- SAVE STATE
+            localStorage.setItem('wcm-isFullView', isFullView);
             this.textContent = isFullView ? '−' : '+';
             renderContent(popup);
         };
 
-        // DEPOSIT CLICK (fixed with direct re-attachment)
-        const depClick = document.getElementById('dep-click');
-        if (depClick) {
-            depClick.onclick = () => {
+        // DEPOSIT CLICK – event delegation (stable after updates)
+        const content = document.getElementById('wcm-content');
+        content.addEventListener('click', function(e) {
+            if (e.target.closest('#dep-click')) {
                 const data = calculateDeposit();
-                localStorage.setItem('autoDepositAmount', data.rawDeposit.toFixed(2));
-                localStorage.setItem('autoDepositNotes', new Date().toLocaleString('en-US',{month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}));
-                if (typeof submitFunction === 'function') submitFunction(4);
-            };
-        }
+                const keyAmt = `autoDepositAmount_${VERSION}`;
+                const keyNotes = `autoDepositNotes_${VERSION}`;
+                localStorage.setItem(keyAmt, data.rawDeposit.toFixed(2));
+                localStorage.setItem(keyNotes, new Date().toLocaleString('en-US',{month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}));
+                setTimeout(() => {
+                    if (typeof submitFunction === 'function') submitFunction(4);
+                }, 50);
+            }
+        });
 
         // PEAK TOOLTIP
         const tooltip = document.getElementById('wcm-peak-tooltip');
@@ -401,7 +403,7 @@
             badge.onmouseleave = () => tooltip.style.opacity = '0';
         });
 
-        // CF CLICK (no alert)
+        // CF CLICK
         const cfPriceEls = document.querySelectorAll('.wcm-cf');
         cfPriceEls.forEach(el => {
             el.onclick = () => {
@@ -421,16 +423,14 @@
         });
     }
 
-    // ====================== AUTO RUN ======================
-    if (window.location.href.includes(CHARGES_PATH)) {
-        window.addEventListener('load', createPopup);
-        setTimeout(() => { if (!document.getElementById('wcm-suite-popup')) createPopup(); }, 800);
-    }
-
+    // ====================== PAYMENTS PAGE ======================
     if (window.location.href.includes(PAYMENTS_PATH)) {
         window.addEventListener('load', () => {
-            const amt = localStorage.getItem('autoDepositAmount');
-            const notes = localStorage.getItem('autoDepositNotes');
+            const keyAmt = `autoDepositAmount_${VERSION}`;
+            const keyNotes = `autoDepositNotes_${VERSION}`;
+            const amt = localStorage.getItem(keyAmt);
+            const notes = localStorage.getItem(keyNotes);
+
             if (amt && notes) {
                 if (!localStorage.getItem('updateInProgress')) {
                     localStorage.setItem('updateInProgress','true');
@@ -440,9 +440,17 @@
                     if (typeof UpdatePayment === 'function') UpdatePayment();
                 } else {
                     if (typeof submitFunction === 'function') submitFunction(3);
-                    localStorage.clear();
+                    localStorage.removeItem(keyAmt);
+                    localStorage.removeItem(keyNotes);
+                    localStorage.removeItem('updateInProgress');
                 }
             }
         });
+    }
+
+    // ====================== AUTO RUN ======================
+    if (window.location.href.includes(CHARGES_PATH)) {
+        window.addEventListener('load', createPopup);
+        setTimeout(() => { if (!document.getElementById('wcm-suite-popup')) createPopup(); }, 800);
     }
 })();
