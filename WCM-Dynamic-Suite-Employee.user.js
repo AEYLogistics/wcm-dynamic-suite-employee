@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         WCM Dynamic Suite v5.31 • Employee Edition
+// @name         WCM Dynamic Suite v5.32 • Employee Edition
 // @namespace    http://tampermonkey.net/
-// @version      5.31
+// @version      5.32
 // @description  Exact Admin v3.04 CF math • +5% on Fri/Sat/Sun + last 3 days of month + all national holidays • Summer +15% (additional) • Enhanced holiday banner (X days before) • Peak Rate tooltip right-edge aligned + high-contrast • Esign Required tooltip • Deposit click FIXED (stable after updates) • Popup min/max state persists
 // @author       @Bakurki
 // @match        https://zebra.hellomoving.com/wc.dll?*
@@ -15,7 +15,6 @@
 
     const CHARGES_PATH = 'mpcharge~chargeswc~';
     const PAYMENTS_PATH = 'mpopr~paymentswc~';
-    const VERSION = '5.31';
 
     // ====================== 210px ULTRA-COMPACT CSS ======================
     const style = document.createElement('style');
@@ -150,7 +149,7 @@
             if (hol.isHoliday) {
                 let msg;
                 if (offset === 0) {
-                    msg = hol.isFederal
+                    msg = hol.isFederal 
                         ? `${hol.emoji} ${hol.name} – Holiday surcharge applies!`
                         : `${hol.emoji} ${hol.name}`;
                 } else {
@@ -282,7 +281,7 @@
         tooltip.id = 'wcm-peak-tooltip';
         document.body.appendChild(tooltip);
 
-        let pos1=0, pos2=0, pos3=0, pos4=0;
+        let pos1=0,pos2=0,pos3=0,pos4=0;
         const header = popup.querySelector('#wcm-suite-header');
         header.onmousedown = e => {
             if (e.target.id === 'wcm-close' || e.target.id === 'wcm-toggle') return;
@@ -323,12 +322,12 @@
 
         let tooltipColor;
         if (isSummerMode(date)) {
-            headerTitle.textContent = 'WCM Summer Suite v5.31 ☀️';
+            headerTitle.textContent = 'WCM Summer Suite v5.32 ☀️';
             header.style.background = 'linear-gradient(90deg, #ff7e5f, #feb47b)';
             header.style.color = '#fff';
             tooltipColor = '#ff7e5f';
         } else {
-            headerTitle.textContent = 'WCM Suite v5.31 ❄️';
+            headerTitle.textContent = 'WCM Suite v5.32 ❄️';
             header.style.background = 'linear-gradient(90deg, #0288d1, #81d4fa)';
             header.style.color = '#fff';
             tooltipColor = '#0288d1';
@@ -374,18 +373,16 @@
             renderContent(popup);
         };
 
-        // DEPOSIT CLICK – event delegation (stable after updates)
+        // DEPOSIT CLICK – simplified keys + longer delay
         const content = document.getElementById('wcm-content');
         content.addEventListener('click', function(e) {
             if (e.target.closest('#dep-click')) {
                 const data = calculateDeposit();
-                const keyAmt = `autoDepositAmount_${VERSION}`;
-                const keyNotes = `autoDepositNotes_${VERSION}`;
-                localStorage.setItem(keyAmt, data.rawDeposit.toFixed(2));
-                localStorage.setItem(keyNotes, new Date().toLocaleString('en-US',{month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}));
+                localStorage.setItem('autoDepositAmount', data.rawDeposit.toFixed(2));
+                localStorage.setItem('autoDepositNotes', new Date().toLocaleString('en-US',{month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}));
                 setTimeout(() => {
                     if (typeof submitFunction === 'function') submitFunction(4);
-                }, 50);
+                }, 150);
             }
         });
 
@@ -426,10 +423,8 @@
     // ====================== PAYMENTS PAGE ======================
     if (window.location.href.includes(PAYMENTS_PATH)) {
         window.addEventListener('load', () => {
-            const keyAmt = `autoDepositAmount_${VERSION}`;
-            const keyNotes = `autoDepositNotes_${VERSION}`;
-            const amt = localStorage.getItem(keyAmt);
-            const notes = localStorage.getItem(keyNotes);
+            const amt = localStorage.getItem('autoDepositAmount');
+            const notes = localStorage.getItem('autoDepositNotes');
 
             if (amt && notes) {
                 if (!localStorage.getItem('updateInProgress')) {
@@ -440,8 +435,8 @@
                     if (typeof UpdatePayment === 'function') UpdatePayment();
                 } else {
                     if (typeof submitFunction === 'function') submitFunction(3);
-                    localStorage.removeItem(keyAmt);
-                    localStorage.removeItem(keyNotes);
+                    localStorage.removeItem('autoDepositAmount');
+                    localStorage.removeItem('autoDepositNotes');
                     localStorage.removeItem('updateInProgress');
                 }
             }
