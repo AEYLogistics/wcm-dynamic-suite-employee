@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         WCM Dynamic Suite v5.33 Debug
+// @name         WCM Dynamic Suite v5.34 • Employee Edition
 // @namespace    http://tampermonkey.net/
-// @version      5.33
-// @description  DEBUG VERSION — Deposit flow logging enabled + Payments page error FIXED
+// @version      5.34
+// @description  Exact Admin v3.04 CF math • +5% on Fri/Sat/Sun + last 3 days of month + all national holidays • Summer +15% (additional) • Enhanced holiday banner (X days before) • Peak Rate tooltip right-edge aligned + high-contrast • Esign Required tooltip • Deposit click with WAIT until Payments screen is fully loaded
 // @author       @Bakurki
 // @match        https://zebra.hellomoving.com/wc.dll?*
 // @updateURL    https://github.com/AEYLogistics/wcm-dynamic-suite-employee/raw/refs/heads/main/WCM-Dynamic-Suite-Employee.user.js
@@ -323,12 +323,12 @@
 
             let tooltipColor;
             if (isSummerMode(date)) {
-                headerTitle.textContent = 'WCM Summer Suite v5.33 ☀️';
+                headerTitle.textContent = 'WCM Summer Suite v5.34 ☀️';
                 header.style.background = 'linear-gradient(90deg, #ff7e5f, #feb47b)';
                 header.style.color = '#fff';
                 tooltipColor = '#ff7e5f';
             } else {
-                headerTitle.textContent = 'WCM Suite v5.33 ❄️';
+                headerTitle.textContent = 'WCM Suite v5.34 ❄️';
                 header.style.background = 'linear-gradient(90deg, #0288d1, #81d4fa)';
                 header.style.color = '#fff';
                 tooltipColor = '#0288d1';
@@ -374,19 +374,15 @@
                 renderContent(popup);
             };
 
-            // DEBUG DEPOSIT CLICK
+            // DEPOSIT CLICK
             const contentEl = document.getElementById('wcm-content');
             if (contentEl) {
                 contentEl.addEventListener('click', function(e) {
                     if (e.target.closest('#dep-click')) {
-                        console.log('DEBUG [Charges]: Deposit button clicked');
                         const data = calculateDeposit();
-                        console.log('DEBUG [Charges]: Calculated raw deposit:', data.rawDeposit);
                         localStorage.setItem('autoDepositAmount', data.rawDeposit.toFixed(2));
                         localStorage.setItem('autoDepositNotes', new Date().toLocaleString('en-US',{month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}));
-                        console.log('DEBUG [Charges]: Data saved to localStorage');
                         setTimeout(() => {
-                            console.log('DEBUG [Charges]: Calling submitFunction(4)');
                             if (typeof submitFunction === 'function') submitFunction(4);
                         }, 150);
                     }
@@ -431,32 +427,45 @@
         setTimeout(() => { if (!document.getElementById('wcm-suite-popup')) createPopup(); }, 800);
     }
 
-    // ====================== PAYMENTS PAGE DEBUG ======================
+    // ====================== PAYMENTS PAGE – WAIT UNTIL LOADED ======================
     if (window.location.href.includes(PAYMENTS_PATH)) {
         window.addEventListener('load', () => {
-            console.log('DEBUG [Payments]: Payments page loaded');
             const amt = localStorage.getItem('autoDepositAmount');
             const notes = localStorage.getItem('autoDepositNotes');
-            console.log('DEBUG [Payments]: Found in localStorage → Amount:', amt, 'Notes:', notes);
 
             if (amt && notes) {
-                console.log('DEBUG [Payments]: Data found — starting auto-fill');
-                if (!localStorage.getItem('updateInProgress')) {
-                    localStorage.setItem('updateInProgress','true');
-                    document.querySelector('input[name="RSRV"]').checked = true;
-                    document.querySelector('input[name="PAYAMT"]').value = amt;
-                    document.querySelector('input[name="NOTES"]').value = notes;
-                    console.log('DEBUG [Payments]: Fields filled — calling UpdatePayment()');
-                    if (typeof UpdatePayment === 'function') UpdatePayment();
-                } else {
-                    console.log('DEBUG [Payments]: updateInProgress flag set — calling submitFunction(3)');
-                    if (typeof submitFunction === 'function') submitFunction(3);
-                    localStorage.removeItem('autoDepositAmount');
-                    localStorage.removeItem('autoDepositNotes');
-                    localStorage.removeItem('updateInProgress');
-                }
-            } else {
-                console.log('DEBUG [Payments]: No data in localStorage — nothing to do');
+                // Polling wait until fields are present (up to 3 seconds)
+                let attempts = 0;
+                const maxAttempts = 30; // 3 seconds
+
+                const interval = setInterval(() => {
+                    attempts++;
+                    const payAmtField = document.querySelector('input[name="PAYAMT"]');
+                    const notesField = document.querySelector('input[name="NOTES"]');
+                    const reserveCheckbox = document.querySelector('input[name="RSRV"]');
+
+                    if (payAmtField && notesField && reserveCheckbox) {
+                        clearInterval(interval);
+                        console.log('DEBUG: Payments fields ready after', attempts * 100, 'ms');
+                        if (!localStorage.getItem('updateInProgress')) {
+                            localStorage.setItem('updateInProgress','true');
+                            reserveCheckbox.checked = true;
+                            payAmtField.value = amt;
+                            notesField.value = notes;
+                            if (typeof UpdatePayment === 'function') UpdatePayment();
+                        } else {
+                            if (typeof submitFunction === 'function') submitFunction(3);
+                            localStorage.removeItem('autoDepositAmount');
+                            localStorage.removeItem('autoDepositNotes');
+                            localStorage.removeItem('updateInProgress');
+                        }
+                    }
+
+                    if (attempts >= maxAttempts) {
+                        clearInterval(interval);
+                        console.log('DEBUG: Payments fields never appeared – giving up');
+                    }
+                }, 100);
             }
         });
     }
