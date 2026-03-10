@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         WCM Dynamic Suite v5.28 • Employee Edition
+// @name         WCM Dynamic Suite v5.29 • Employee Edition
 // @namespace    http://tampermonkey.net/
-// @version      5.28
-// @description  Exact Admin v3.04 CF math • +5% on Fri/Sat/Sun + last 3 days of month + all national holidays • Summer +15% (additional) • Enhanced holiday banner (X days before) • Peak Rate tooltip right-edge aligned + FIXED (high-contrast + seasonal header color match) • Esign Received required before "Book This Job" button can be clicked • CF click alert removed
+// @version      5.29
+// @description  Exact Admin v3.04 CF math • +5% on Fri/Sat/Sun + last 3 days of month + all national holidays • Summer +15% (additional) • Enhanced holiday banner (X days before) • Peak Rate tooltip right-edge aligned + high-contrast • Esign Required tooltip • Deposit click FIXED • Popup min/max state now persists after refresh
 // @author       @Bakurki
 // @match        https://zebra.hellomoving.com/wc.dll?*
 // @updateURL    https://github.com/AEYLogistics/wcm-dynamic-suite-employee/raw/refs/heads/main/WCM-Dynamic-Suite-Employee.user.js
@@ -87,7 +87,7 @@
         const dow = date.getDay();
         const year = date.getFullYear();
 
-        // FEDERAL HOLIDAYS (surcharge applies)
+        // FEDERAL HOLIDAYS
         if (m === 1 && d === 1) return { isHoliday: true, name: "New Year’s", emoji: "🎉", isFederal: true };
         if (m === 1 && dow === 1 && d >= 15 && d <= 21) return { isHoliday: true, name: "MLK Day", emoji: "✊", isFederal: true };
         if (m === 2 && dow === 1 && d >= 15 && d <= 21) return { isHoliday: true, name: "Presidents’ Day", emoji: "🏛️", isFederal: true };
@@ -100,7 +100,7 @@
         if (m === 11 && dow === 4 && d >= 22 && d <= 28) return { isHoliday: true, name: "Thanksgiving", emoji: "🦃", isFederal: true };
         if (m === 12 && d === 25) return { isHoliday: true, name: "Christmas", emoji: "🎄", isFederal: true };
 
-        // OTHER MAJOR HOLIDAYS (no surcharge)
+        // OTHER HOLIDAYS
         if (m === 2 && d === 14) return { isHoliday: true, name: "Valentine’s Day", emoji: "❤️", isFederal: false };
         if (m === 3 && d === 17) return { isHoliday: true, name: "St. Patrick’s Day", emoji: "🍀", isFederal: false };
         if (m === 5 && d === 5) return { isHoliday: true, name: "Cinco de Mayo", emoji: "🍹", isFederal: false };
@@ -254,8 +254,8 @@
         }
     }
 
-    // ====================== COMPACT POPUP ======================
-    let isFullView = true;
+    // ====================== COMPACT POPUP (STATE NOW PERSISTS) ======================
+    let isFullView = localStorage.getItem('wcm-isFullView') !== 'false';   // default expanded
 
     function createPopup() {
         if (document.getElementById('wcm-suite-popup')) return;
@@ -323,15 +323,14 @@
         const header = popup.querySelector('#wcm-suite-header');
         const tooltip = document.getElementById('wcm-peak-tooltip');
 
-        // RESTORED SEASONAL TOOLTIP COLOR (high-contrast + header match)
         let tooltipColor;
         if (isSummerMode(date)) {
-            headerTitle.textContent = 'WCM Summer Suite v5.28 ☀️';
+            headerTitle.textContent = 'WCM Summer Suite v5.29 ☀️';
             header.style.background = 'linear-gradient(90deg, #ff7e5f, #feb47b)';
             header.style.color = '#fff';
             tooltipColor = '#ff7e5f';
         } else {
-            headerTitle.textContent = 'WCM Suite v5.28 ❄️';
+            headerTitle.textContent = 'WCM Suite v5.29 ❄️';
             header.style.background = 'linear-gradient(90deg, #0288d1, #81d4fa)';
             header.style.color = '#fff';
             tooltipColor = '#0288d1';
@@ -372,18 +371,23 @@
 
         document.getElementById('wcm-toggle').onclick = function() {
             isFullView = !isFullView;
+            localStorage.setItem('wcm-isFullView', isFullView);   // <--- SAVE STATE
             this.textContent = isFullView ? '−' : '+';
             renderContent(popup);
         };
 
-        document.getElementById('dep-click').onclick = () => {
-            const data = calculateDeposit();
-            localStorage.setItem('autoDepositAmount', data.rawDeposit.toFixed(2));
-            localStorage.setItem('autoDepositNotes', new Date().toLocaleString('en-US',{month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}));
-            if (typeof submitFunction === 'function') submitFunction(4);
-        };
+        // DEPOSIT CLICK (fixed with direct re-attachment)
+        const depClick = document.getElementById('dep-click');
+        if (depClick) {
+            depClick.onclick = () => {
+                const data = calculateDeposit();
+                localStorage.setItem('autoDepositAmount', data.rawDeposit.toFixed(2));
+                localStorage.setItem('autoDepositNotes', new Date().toLocaleString('en-US',{month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}));
+                if (typeof submitFunction === 'function') submitFunction(4);
+            };
+        }
 
-        // FIXED PEAK TOOLTIP (re-attached every render + high-contrast)
+        // PEAK TOOLTIP
         const tooltip = document.getElementById('wcm-peak-tooltip');
         const peakBadges = document.querySelectorAll('.wcm-peak');
         peakBadges.forEach(badge => {
@@ -397,7 +401,7 @@
             badge.onmouseleave = () => tooltip.style.opacity = '0';
         });
 
-        // CF CLICK – NO ALERT
+        // CF CLICK (no alert)
         const cfPriceEls = document.querySelectorAll('.wcm-cf');
         cfPriceEls.forEach(el => {
             el.onclick = () => {
