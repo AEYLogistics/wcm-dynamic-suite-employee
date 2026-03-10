@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         WCM Dynamic Suite v5.21 • Employee Edition
+// @name         WCM Dynamic Suite v5.24 • Employee Edition
 // @namespace    http://tampermonkey.net/
-// @version      5.21
-// @description  Exact Admin v3.04 CF math • +5% on Fri/Sat/Sun + last 3 days of month + all national holidays • Summer +15% (additional) • Peak Rate tooltip right-edge aligned • 210px width • Starts maximized • Side-by-side buttons
+// @version      5.24
+// @description  Exact Admin v3.04 CF math • +5% on Fri/Sat/Sun + last 3 days of month + all national holidays • Summer +15% (additional) • Peak Rate tooltip right-edge aligned • "Esign Received" required before "Book This Job" button can be clicked + hover tooltip
 // @author       @Bakurki
 // @match        https://zebra.hellomoving.com/wc.dll?*
 // @updateURL    https://github.com/AEYLogistics/wcm-dynamic-suite-employee/raw/refs/heads/main/WCM-Dynamic-Suite-Employee.user.js
@@ -200,6 +200,29 @@
         return messages.length ? messages.join('<br>') : '';
     }
 
+    // ====================== ESIGN CHECK & BUTTON DISABLE + TOOLTIP ======================
+    function checkEsignStatus() {
+        const bookButton = Array.from(document.querySelectorAll('input[type="button"], button'))
+            .find(el => el.value && el.value.includes('Book This Job'));
+
+        if (!bookButton) return;
+
+        const esignRow = document.querySelector('tr[style*="font-family:Arial;font-size:10pt;"]');
+        const hasEsignReceived = esignRow && esignRow.textContent.includes('Esign Received');
+
+        if (hasEsignReceived) {
+            bookButton.disabled = false;
+            bookButton.style.opacity = '1';
+            bookButton.style.cursor = 'pointer';
+            bookButton.title = '';                    // remove tooltip
+        } else {
+            bookButton.disabled = true;
+            bookButton.style.opacity = '0.5';
+            bookButton.style.cursor = 'not-allowed';
+            bookButton.title = 'Esign Required Before Booking';   // hover tooltip
+        }
+    }
+
     // ====================== COMPACT POPUP (STARTS MAXIMIZED) ======================
     let isFullView = true;
 
@@ -250,6 +273,11 @@
         };
 
         renderContent(popup);
+        checkEsignStatus(); // initial check
+
+        // Re-check every time the page changes
+        const observer = new MutationObserver(checkEsignStatus);
+        observer.observe(document.body, { childList: true, subtree: true });
     }
 
     function renderContent(popup) {
@@ -267,12 +295,12 @@
 
         let headerColor, tooltipColor;
         if (isSummerMode(date)) {
-            headerTitle.textContent = 'WCM Summer Suite v5.21 ☀️';
+            headerTitle.textContent = 'WCM Summer Suite v5.24 ☀️';
             header.style.background = 'linear-gradient(90deg, #ff7e5f, #feb47b)';
             header.style.color = '#fff';
             tooltipColor = '#ff7e5f';
         } else {
-            headerTitle.textContent = 'WCM Suite v5.21 ❄️';
+            headerTitle.textContent = 'WCM Suite v5.24 ❄️';
             header.style.background = 'linear-gradient(90deg, #0288d1, #81d4fa)';
             header.style.color = '#fff';
             tooltipColor = '#0288d1';
