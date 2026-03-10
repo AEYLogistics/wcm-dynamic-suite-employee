@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         WCM Dynamic Suite v5.32 • Employee Edition
+// @name         WCM Dynamic Suite v5.32 Debug
 // @namespace    http://tampermonkey.net/
 // @version      5.32
-// @description  Exact Admin v3.04 CF math • +5% on Fri/Sat/Sun + last 3 days of month + all national holidays • Summer +15% (additional) • Enhanced holiday banner (X days before) • Peak Rate tooltip right-edge aligned + high-contrast • Esign Required tooltip • Deposit click FIXED (stable after updates) • Popup min/max state persists
+// @description  DEBUG VERSION — Deposit flow logging enabled • Upload this and send me the console output
 // @author       @Bakurki
 // @match        https://zebra.hellomoving.com/wc.dll?*
 // @updateURL    https://github.com/AEYLogistics/wcm-dynamic-suite-employee/raw/refs/heads/main/WCM-Dynamic-Suite-Employee.user.js
@@ -44,7 +44,9 @@
     `;
     document.head.appendChild(style);
 
-    // ====================== DATE HELPERS ======================
+    // ====================== DATE HELPERS, HOLIDAY SYSTEM, CALCULATIONS (unchanged) ======================
+    // (All previous functions are here exactly as in v5.31 — getPickupDate, isSummerMode, getHolidayInfo, calculateDeposit, calculateCF, getAlerts, getPeakReason, getSurchargeMultiplier, etc.)
+
     function getPickupDate() {
         const el = document.querySelector('input[name="PUDTE"]');
         if (!el || !el.value) return null;
@@ -79,7 +81,6 @@
         return date.getDate() >= lastDay - 2;
     }
 
-    // ====================== HOLIDAY SYSTEM ======================
     function getHolidayInfo(date) {
         if (!date) return { isHoliday: false, name: '', emoji: '', isFederal: false };
         const m = date.getMonth() + 1;
@@ -164,7 +165,6 @@
         return messages.length ? messages.join('<br>') : '';
     }
 
-    // ====================== CALCULATIONS ======================
     function calculateDeposit() {
         const subtotalTds = document.querySelectorAll('td.TD7[align="right"][colspan="4"]');
         let subtotalText = subtotalTds.length ? subtotalTds[0].nextElementSibling.querySelector('b')?.textContent.trim() || '0' : '0';
@@ -373,14 +373,18 @@
             renderContent(popup);
         };
 
-        // DEPOSIT CLICK – simplified keys + longer delay
+        // DEBUG DEPOSIT CLICK
         const content = document.getElementById('wcm-content');
         content.addEventListener('click', function(e) {
             if (e.target.closest('#dep-click')) {
+                console.log('DEBUG [Charges]: Deposit button clicked');
                 const data = calculateDeposit();
+                console.log('DEBUG [Charges]: Calculated raw deposit:', data.rawDeposit);
                 localStorage.setItem('autoDepositAmount', data.rawDeposit.toFixed(2));
                 localStorage.setItem('autoDepositNotes', new Date().toLocaleString('en-US',{month:'2-digit',day:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}));
+                console.log('DEBUG [Charges]: Data saved to localStorage');
                 setTimeout(() => {
+                    console.log('DEBUG [Charges]: Calling submitFunction(4)');
                     if (typeof submitFunction === 'function') submitFunction(4);
                 }, 150);
             }
@@ -420,25 +424,32 @@
         });
     }
 
-    // ====================== PAYMENTS PAGE ======================
+    // ====================== PAYMENTS PAGE DEBUG ======================
     if (window.location.href.includes(PAYMENTS_PATH)) {
         window.addEventListener('load', () => {
+            console.log('DEBUG [Payments]: Payments page loaded');
             const amt = localStorage.getItem('autoDepositAmount');
             const notes = localStorage.getItem('autoDepositNotes');
+            console.log('DEBUG [Payments]: Found in localStorage → Amount:', amt, 'Notes:', notes);
 
             if (amt && notes) {
+                console.log('DEBUG [Payments]: Data found — starting auto-fill');
                 if (!localStorage.getItem('updateInProgress')) {
                     localStorage.setItem('updateInProgress','true');
                     document.querySelector('input[name="RSRV"]').checked = true;
                     document.querySelector('input[name="PAYAMT"]').value = amt;
                     document.querySelector('input[name="NOTES"]').value = notes;
+                    console.log('DEBUG [Payments]: Fields filled — calling UpdatePayment()');
                     if (typeof UpdatePayment === 'function') UpdatePayment();
                 } else {
+                    console.log('DEBUG [Payments]: updateInProgress flag set — calling submitFunction(3)');
                     if (typeof submitFunction === 'function') submitFunction(3);
                     localStorage.removeItem('autoDepositAmount');
                     localStorage.removeItem('autoDepositNotes');
                     localStorage.removeItem('updateInProgress');
                 }
+            } else {
+                console.log('DEBUG [Payments]: No data in localStorage — nothing to do');
             }
         });
     }
