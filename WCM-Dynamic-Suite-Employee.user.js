@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         WCM Dynamic Suite v5.40 • Employee Edition
+// @name         WCM Dynamic Suite v5.42 • Employee Edition
 // @namespace    http://tampermonkey.net/
-// @version      5.40
+// @version      5.42
 // @description  Exact Admin v3.04 CF math • +5% on Fri/Sat/Sun + last 3 days of month + all national holidays • Summer +15% (additional) • Enhanced holiday banner (X days before) • Peak Rate tooltip right-edge aligned + high-contrast • Esign Required tooltip • Deposit click with WAIT until Payments screen is fully loaded
 // @author       @Bakurki
 // @match        https://zebra.hellomoving.com/wc.dll?*
@@ -10,7 +10,7 @@
 // @grant        none
 // ==/UserScript==
 
-// CACHE-BUST 2026-03-10 - forces Tampermonkey to reload fresh version
+// CACHE-BUST 2026-03-10 21:30 - NEW VERSION FORCED
 
 (function() {
     'use strict';
@@ -81,7 +81,6 @@
         return date.getDate() >= lastDay - 2;
     }
 
-    // ====================== HOLIDAY SYSTEM ======================
     function getHolidayInfo(date) {
         if (!date) return { isHoliday: false, name: '', emoji: '', isFederal: false };
         const m = date.getMonth() + 1;
@@ -229,7 +228,6 @@
         return { cf, miles, pricePerCf, isPeakRate: !!peakReason, peakReason };
     }
 
-    // ====================== ESIGN CHECK ======================
     function checkEsignStatus() {
         const bookButton = Array.from(document.querySelectorAll('input[type="button"], button'))
             .find(el => el.value && el.value.includes('Book This Job'));
@@ -288,6 +286,7 @@
                 }, 100);
             }
         });
+        return; // ← stops any further code from running on Payments page
     }
 
     // ====================== CHARGES PAGE ONLY (strict isolation) ======================
@@ -362,12 +361,12 @@
 
             let tooltipColor;
             if (isSummerMode(date)) {
-                headerTitle.textContent = 'WCM Summer Suite v5.40 ☀️';
+                headerTitle.textContent = 'WCM Summer Suite v5.42 ☀️';
                 header.style.background = 'linear-gradient(90deg, #ff7e5f, #feb47b)';
                 header.style.color = '#fff';
                 tooltipColor = '#ff7e5f';
             } else {
-                headerTitle.textContent = 'WCM Suite v5.40 ❄️';
+                headerTitle.textContent = 'WCM Suite v5.42 ❄️';
                 header.style.background = 'linear-gradient(90deg, #0288d1, #81d4fa)';
                 header.style.color = '#fff';
                 tooltipColor = '#0288d1';
