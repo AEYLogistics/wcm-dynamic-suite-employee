@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         WCM Dynamic Suite v5.42 • Employee Edition
+// @name         WCM Dynamic Suite v5.43 • Employee Edition
 // @namespace    http://tampermonkey.net/
-// @version      5.42
+// @version      5.43
 // @description  Exact Admin v3.04 CF math • +5% on Fri/Sat/Sun + last 3 days of month + all national holidays • Summer +15% (additional) • Enhanced holiday banner (X days before) • Peak Rate tooltip right-edge aligned + high-contrast • Esign Required tooltip • Deposit click with WAIT until Payments screen is fully loaded
 // @author       @Bakurki
 // @match        https://zebra.hellomoving.com/wc.dll?*
@@ -10,7 +10,7 @@
 // @grant        none
 // ==/UserScript==
 
-// CACHE-BUST 2026-03-10 21:30 - NEW VERSION FORCED
+// CACHE-BUST 2026-03-10 21:45 - DELETE OLD SCRIPT FIRST!
 
 (function() {
     'use strict';
@@ -250,8 +250,9 @@
         }
     }
 
-    // ====================== PAYMENTS PAGE – WAIT UNTIL LOADED (strictly isolated at top) ======================
+    // ====================== PAYMENTS PAGE – STRICT ISOLATION ======================
     if (window.location.href.includes(PAYMENTS_PATH)) {
+        console.log('✅ WCM Suite v5.43: Running on PAYMENTS page (deposit handler only)');
         window.addEventListener('load', () => {
             const amt = localStorage.getItem('autoDepositAmount');
             const notes = localStorage.getItem('autoDepositNotes');
@@ -286,11 +287,12 @@
                 }, 100);
             }
         });
-        return; // ← stops any further code from running on Payments page
+        return; // ← NOTHING ELSE RUNS ON PAYMENTS PAGE
     }
 
-    // ====================== CHARGES PAGE ONLY (strict isolation) ======================
+    // ====================== CHARGES PAGE ONLY ======================
     if (window.location.href.includes(CHARGES_PATH)) {
+        console.log('✅ WCM Suite v5.43: Running on CHARGES page (full popup + calculator)');
         let isFullView = localStorage.getItem('wcm-isFullView') !== 'false';
 
         function createPopup() {
@@ -361,12 +363,12 @@
 
             let tooltipColor;
             if (isSummerMode(date)) {
-                headerTitle.textContent = 'WCM Summer Suite v5.42 ☀️';
+                headerTitle.textContent = 'WCM Summer Suite v5.43 ☀️';
                 header.style.background = 'linear-gradient(90deg, #ff7e5f, #feb47b)';
                 header.style.color = '#fff';
                 tooltipColor = '#ff7e5f';
             } else {
-                headerTitle.textContent = 'WCM Suite v5.42 ❄️';
+                headerTitle.textContent = 'WCM Suite v5.43 ❄️';
                 header.style.background = 'linear-gradient(90deg, #0288d1, #81d4fa)';
                 header.style.color = '#fff';
                 tooltipColor = '#0288d1';
