@@ -1,14 +1,14 @@
 // ==UserScript==
-// @name         WCM Dynamic Suite v5.47 • Employee Edition (Full)
+// @name         WCM Dynamic Suite v5.49 • Employee Edition (Full)
 // @namespace    http://tampermonkey.net/
-// @version      5.47
-// @description  Full calculator fetched by loader • Strictest isolation ever • Deposit finally works perfectly
+// @version      5.49
+// @description  Smart Loader + precise Easter date calculation (exact day only, no 2-week banner) • All US holidays confirmed accurate
 // @author       @Bakurki
 // @match        https://zebra.hellomoving.com/wc.dll?*
 // @grant        none
 // ==/UserScript==
 
-// CACHE-BUST 2026-03-10 22:40 - Loader always pulls this fresh version
+// CACHE-BUST 2026-03-10 23:00 - Loader pulls this fresh
 
 (function() {
     'use strict';
@@ -16,9 +16,9 @@
     const CHARGES_PATH = 'mpcharge~chargeswc~';
     const PAYMENTS_PATH = 'mpopr~paymentswc~';
 
-    // ====================== PAYMENTS PAGE – STRICT ISOLATION ======================
+    // ====================== PAYMENTS PAGE – DIRECT HANDLER (never loads full scraper) ======================
     if (window.location.href.includes(PAYMENTS_PATH)) {
-        console.log('✅ WCM v5.47: PAYMENTS page - deposit handler active');
+        console.log('✅ WCM v5.49: PAYMENTS page - deposit handler active');
         window.addEventListener('load', () => {
             const amt = localStorage.getItem('autoDepositAmount');
             const notes = localStorage.getItem('autoDepositNotes');
@@ -53,16 +53,13 @@
                 }, 100);
             }
         });
-        return; // ← HARD STOP - NOTHING ELSE CAN RUN ON PAYMENTS PAGE
-    }
-
-    // ====================== HARD STOP - ONLY CONTINUE IF CHARGES PAGE ======================
-    if (!window.location.href.includes(CHARGES_PATH)) {
-        console.log('WCM v5.47: Not Charges or Payments - exiting');
         return;
     }
 
-    console.log('✅ WCM v5.47: CHARGES page - full popup & calculator active');
+    // ====================== CHARGES PAGE ONLY ======================
+    if (!window.location.href.includes(CHARGES_PATH)) return;
+
+    console.log('✅ WCM v5.49: CHARGES page - full scraper active');
 
     // ====================== 210px ULTRA-COMPACT CSS ======================
     const style = document.createElement('style');
@@ -127,7 +124,26 @@
         return date.getDate() >= lastDay - 2;
     }
 
-    // ====================== HOLIDAY SYSTEM ======================
+    // ====================== PRECISE EASTER CALCULATION (Meeus algorithm – exact date confirmed) ======================
+    function getEasterDate(year) {
+        const a = year % 19;
+        const b = Math.floor(year / 100);
+        const c = year % 100;
+        const d = Math.floor(b / 4);
+        const e = b % 4;
+        const f = Math.floor((b + 8) / 25);
+        const g = Math.floor((b - f + 1) / 3);
+        const h = (19 * a + b - d - g + 15) % 30;
+        const i = Math.floor(c / 4);
+        const k = c % 4;
+        const l = (32 + 2 * e + 2 * i - h - k) % 7;
+        const m = Math.floor((a + 11 * h + 22 * l) / 451);
+        const month = Math.floor((h + l - 7 * m + 114) / 31);
+        const day = ((h + l - 7 * m + 114) % 31) + 1;
+        return new Date(year, month - 1, day);
+    }
+
+    // ====================== HOLIDAY SYSTEM (all dates confirmed accurate per your list) ======================
     function getHolidayInfo(date) {
         if (!date) return { isHoliday: false, name: '', emoji: '', isFederal: false };
         const m = date.getMonth() + 1;
@@ -135,6 +151,7 @@
         const dow = date.getDay();
         const year = date.getFullYear();
 
+        // Fixed & weekday holidays (exact)
         if (m === 1 && d === 1) return { isHoliday: true, name: "New Year’s", emoji: "🎉", isFederal: true };
         if (m === 1 && dow === 1 && d >= 15 && d <= 21) return { isHoliday: true, name: "MLK Day", emoji: "✊", isFederal: true };
         if (m === 2 && dow === 1 && d >= 15 && d <= 21) return { isHoliday: true, name: "Presidents’ Day", emoji: "🏛️", isFederal: true };
@@ -147,14 +164,20 @@
         if (m === 11 && dow === 4 && d >= 22 && d <= 28) return { isHoliday: true, name: "Thanksgiving", emoji: "🦃", isFederal: true };
         if (m === 12 && d === 25) return { isHoliday: true, name: "Christmas", emoji: "🎄", isFederal: true };
 
+        // Non-federal exact dates
         if (m === 2 && d === 14) return { isHoliday: true, name: "Valentine’s Day", emoji: "❤️", isFederal: false };
         if (m === 3 && d === 17) return { isHoliday: true, name: "St. Patrick’s Day", emoji: "🍀", isFederal: false };
         if (m === 5 && d === 5) return { isHoliday: true, name: "Cinco de Mayo", emoji: "🍹", isFederal: false };
         if (m === 10 && d === 31) return { isHoliday: true, name: "Halloween", emoji: "🎃", isFederal: false };
         if (m === 12 && d === 31) return { isHoliday: true, name: "New Year’s Eve", emoji: "🎊", isFederal: false };
-        if ((m === 3 && d >= 22 && d <= 31) || (m === 4 && d >= 1 && d <= 25)) return { isHoliday: true, name: "Easter", emoji: "🐰", isFederal: false };
+
+        // Mother’s / Father’s Day exact Sunday rules
         if (m === 5 && dow === 0 && d >= 8 && d <= 14) return { isHoliday: true, name: "Mother’s Day", emoji: "💐", isFederal: false };
         if (m === 6 && dow === 0 && d >= 15 && d <= 21) return { isHoliday: true, name: "Father’s Day", emoji: "👔", isFederal: false };
+
+        // Easter – precise date only (no 2-week window)
+        const easter = getEasterDate(year);
+        if (m === easter.getMonth() + 1 && d === easter.getDate()) return { isHoliday: true, name: "Easter", emoji: "🐰", isFederal: false };
 
         return { isHoliday: false, name: '', emoji: '', isFederal: false };
     }
@@ -275,7 +298,6 @@
         return { cf, miles, pricePerCf, isPeakRate: !!peakReason, peakReason };
     }
 
-    // ====================== ESIGN CHECK ======================
     function checkEsignStatus() {
         const bookButton = Array.from(document.querySelectorAll('input[type="button"], button'))
             .find(el => el.value && el.value.includes('Book This Job'));
@@ -298,7 +320,7 @@
         }
     }
 
-    // ====================== CHARGES PAGE ONLY ======================
+    // ====================== CHARGES PAGE FULL UI ======================
     let isFullView = localStorage.getItem('wcm-isFullView') !== 'false';
 
     function createPopup() {
@@ -369,12 +391,12 @@
 
         let tooltipColor;
         if (isSummerMode(date)) {
-            headerTitle.textContent = 'WCM Summer Suite v5.47 ☀️';
+            headerTitle.textContent = 'WCM Summer Suite v5.49 ☀️';
             header.style.background = 'linear-gradient(90deg, #ff7e5f, #feb47b)';
             header.style.color = '#fff';
             tooltipColor = '#ff7e5f';
         } else {
-            headerTitle.textContent = 'WCM Suite v5.47 ❄️';
+            headerTitle.textContent = 'WCM Suite v5.49 ❄️';
             header.style.background = 'linear-gradient(90deg, #0288d1, #81d4fa)';
             header.style.color = '#fff';
             tooltipColor = '#0288d1';
