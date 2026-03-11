@@ -1,16 +1,14 @@
 // ==UserScript==
-// @name         WCM Dynamic Suite v5.44 • Employee Edition
+// @name         WCM Dynamic Suite v5.45 • Employee Edition (Full)
 // @namespace    http://tampermonkey.net/
-// @version      5.44
-// @description  Exact Admin v3.04 CF math • +5% on Fri/Sat/Sun + last 3 days of month + all national holidays • Summer +15% (additional) • Enhanced holiday banner (X days before) • Peak Rate tooltip right-edge aligned + high-contrast • Esign Required tooltip • Deposit click with WAIT until Payments screen is fully loaded
+// @version      5.45
+// @description  Full calculator fetched by loader • Strict Payments isolation • Deposit fixed forever • No caching
 // @author       @Bakurki
 // @match        https://zebra.hellomoving.com/wc.dll?*
-// @updateURL    https://github.com/AEYLogistics/wcm-dynamic-suite-employee/raw/refs/heads/main/WCM-Dynamic-Suite-Employee.user.js
-// @downloadURL  https://github.com/AEYLogistics/wcm-dynamic-suite-employee/raw/refs/heads/main/WCM-Dynamic-Suite-Employee.user.js
 // @grant        none
 // ==/UserScript==
 
-// CACHE-BUST 2026-03-10 21:55 - DELETE OLD SCRIPT FIRST!
+// CACHE-BUST 2026-03-10 22:10 - Loader always pulls this fresh version
 
 (function() {
     'use strict';
@@ -250,9 +248,9 @@
         }
     }
 
-    // ====================== PAYMENTS PAGE – STRICT ISOLATION (runs first, then stops) ======================
+    // ====================== PAYMENTS PAGE – STRICT ISOLATION ======================
     if (window.location.href.includes(PAYMENTS_PATH)) {
-        console.log('✅ WCM v5.44 PAYMENTS: Deposit handler active');
+        console.log('✅ WCM v5.45: PAYMENTS page - deposit handler active');
         window.addEventListener('load', () => {
             const amt = localStorage.getItem('autoDepositAmount');
             const notes = localStorage.getItem('autoDepositNotes');
@@ -287,12 +285,12 @@
                 }, 100);
             }
         });
-        return; // ← STOPS EVERYTHING ELSE ON PAYMENTS PAGE
+        return; // ← NOTHING ELSE RUNS ON PAYMENTS PAGE
     }
 
     // ====================== CHARGES PAGE ONLY ======================
     if (window.location.href.includes(CHARGES_PATH)) {
-        console.log('✅ WCM v5.44 CHARGES: Full popup + calculator active');
+        console.log('✅ WCM v5.45: CHARGES page - full popup & calculator active');
         let isFullView = localStorage.getItem('wcm-isFullView') !== 'false';
 
         function createPopup() {
@@ -363,12 +361,12 @@
 
             let tooltipColor;
             if (isSummerMode(date)) {
-                headerTitle.textContent = 'WCM Summer Suite v5.44 ☀️';
+                headerTitle.textContent = 'WCM Summer Suite v5.45 ☀️';
                 header.style.background = 'linear-gradient(90deg, #ff7e5f, #feb47b)';
                 header.style.color = '#fff';
                 tooltipColor = '#ff7e5f';
             } else {
-                headerTitle.textContent = 'WCM Suite v5.44 ❄️';
+                headerTitle.textContent = 'WCM Suite v5.45 ❄️';
                 header.style.background = 'linear-gradient(90deg, #0288d1, #81d4fa)';
                 header.style.color = '#fff';
                 tooltipColor = '#0288d1';
