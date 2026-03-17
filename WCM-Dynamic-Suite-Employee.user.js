@@ -1,25 +1,23 @@
 // ==UserScript==
-// @name         Dynamic Suite • Employee Edition (Full)
+// @name         WCM Dynamic Suite v7.00 • Employee Edition (Full)
 // @namespace    http://tampermonkey.net/
-// @version      5.74
+// @version      7.00
 // @description  v5.74 • Full Pack now ALWAYS updates text + amount to match current CF • Binding stays "higher only"
 // @author       @Bakurki
 // @match        https://*.hellomoving.com/*
 // @grant        none
 // ==/UserScript==
-
-// CACHE-BUST 2026-03-11 16:24 - Loader pulls this fresh
+// CACHE-BUST 2026-03-17 13:18 - Loader pulls this fresh
 // STATIC TIMESTAMPS - UPDATED WITH EVERY VERSION (as requested)
-const LOADER_LAST_UPDATED = 'March 11, 2026 4:24 PM EDT';
-const FULL_LAST_UPDATED = 'March 11, 2026 4:24 PM EDT';
-
+const LOADER_LAST_UPDATED = 'March 17, 2026 01:18 PM EDT';
+const FULL_LAST_UPDATED = 'March 17, 2026 01:18 PM EDT';
 (function() {
     'use strict';
     const CHARGES_PATH = 'mpcharge~chargeswc~';
     const PAYMENTS_PATH = 'mpopr~paymentswc~';
     // ====================== PAYMENTS PAGE – DIRECT HANDLER ======================
     if (window.location.href.includes(PAYMENTS_PATH)) {
-        console.log('✅ Dynamic Suite v5.74: PAYMENTS page - deposit handler active');
+        console.log('✅ Dynamic Suite v7.00: PAYMENTS page - deposit handler active');
         window.addEventListener('load', () => {
             const amt = localStorage.getItem('autoDepositAmount');
             const notes = localStorage.getItem('autoDepositNotes');
@@ -53,7 +51,7 @@ const FULL_LAST_UPDATED = 'March 11, 2026 4:24 PM EDT';
         return;
     }
     if (!window.location.href.includes(CHARGES_PATH)) return;
-    console.log('✅ Dynamic Suite v5.74: CHARGES page - full scraper active');
+    console.log('✅ Dynamic Suite v7.00: CHARGES page - full scraper active');
     // ====================== CSS (dynamic toggle theme support) ======================
     const style = document.createElement('style');
     style.textContent = `
@@ -359,11 +357,11 @@ const FULL_LAST_UPDATED = 'March 11, 2026 4:24 PM EDT';
         const toggleBtn = document.getElementById('wcm-toggle');
         toggleBtn.textContent = isFullView ? '−' : '+';
         if (isSummerMode(date)) {
-            headerTitle.textContent = 'Dynamic Suite v5.74 ☀️';
+            headerTitle.textContent = 'Dynamic Suite v7.00 ☀️';
             header.style.background = 'linear-gradient(90deg, #ff7e5f, #feb47b)';
             header.style.color = '#fff';
         } else {
-            headerTitle.textContent = 'Dynamic Suite v5.74 ❄️';
+            headerTitle.textContent = 'Dynamic Suite v7.00 ❄️';
             header.style.background = 'linear-gradient(90deg, #0288d1, #81d4fa)';
             header.style.color = '#fff';
         }
@@ -493,10 +491,10 @@ const FULL_LAST_UPDATED = 'March 11, 2026 4:24 PM EDT';
         const miniPack = document.getElementById('mini-pack');
         const miniState = document.getElementById('mini-state');
         const miniBinding = document.getElementById('mini-binding');
-        if (miniDetails) miniDetails.onchange = function() { 
-            showDetails = this.checked; 
-            localStorage.setItem('miniShowDetails', showDetails); 
-            renderContent(popup); 
+        if (miniDetails) miniDetails.onchange = function() {
+            showDetails = this.checked;
+            localStorage.setItem('miniShowDetails', showDetails);
+            renderContent(popup);
         };
         if (miniFree) miniFree.onchange = function() { freeStorage = this.checked; localStorage.setItem('miniFreeStorage', freeStorage); };
         if (miniPack) miniPack.onchange = function() { fullPack = this.checked; localStorage.setItem('miniFullPack', fullPack); };
