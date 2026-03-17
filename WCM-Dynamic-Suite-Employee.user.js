@@ -1,11 +1,11 @@
 // ==UserScript==
-// @name         WCM Dynamic Suite v7.00 • Employee Edition (Full)
-// @namespace    http://tampermonkey.net/
-// @version      7.00
-// @description  v5.74 • Full Pack now ALWAYS updates text + amount to match current CF • Binding stays "higher only"
-// @author       @Bakurki
-// @match        https://*.hellomoving.com/*
-// @grant        none
+// @name WCM Dynamic Suite v7.00 • Employee Edition (Full)
+// @namespace http://tampermonkey.net/
+// @version 7.00
+// @description v5.74 • Full Pack now ALWAYS updates text + amount to match current CF • Binding stays "higher only"
+// @author @Bakurki
+// @match https://*.hellomoving.com/*
+// @grant none
 // ==/UserScript==
 // CACHE-BUST 2026-03-17 13:18 - Loader pulls this fresh
 // STATIC TIMESTAMPS - UPDATED WITH EVERY VERSION (as requested)
@@ -316,6 +316,7 @@ const FULL_LAST_UPDATED = 'March 17, 2026 01:18 PM EDT';
             <label style="display:flex;align-items:center;justify-content:space-between;margin:6px 0;font-size:11px;"><span class="wcm-label">Full Pack</span><span class="toggle-switch"><input type="checkbox" id="mini-pack" ${fullPack?'checked':''}><span class="slider"></span></span></label>
             <label style="display:flex;align-items:center;justify-content:space-between;margin:6px 0;font-size:11px;"><span class="wcm-label">State Discount</span><span class="toggle-switch"><input type="checkbox" id="mini-state" ${stateDiscount?'checked':''}><span class="slider"></span></span></label>
             <label style="display:flex;align-items:center;justify-content:space-between;margin:6px 0;font-size:11px;"><span class="wcm-label">Binding</span><span class="toggle-switch"><input type="checkbox" id="mini-binding" ${bindingFee?'checked':''}><span class="slider"></span></span></label>
+            <div style="text-align:center;font-size:10px;color:#adb5bd;font-weight:500;">Employee Edition v7.00</div>
         `;
         document.body.appendChild(drawer);
         const tooltip = document.createElement('div');
